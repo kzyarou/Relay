@@ -8,6 +8,7 @@ export async function createSession(code: string, initialState: SessionState): P
   console.log('Firebase createSession called', { code, initialState });
   try {
     const sessionRef = ref(realtimeDB, `${SESSIONS_PATH}/${code}`);
+    console.log('Session ref created:', sessionRef.toString());
     await set(sessionRef, initialState);
     console.log('Firebase createSession success');
   } catch (error) {
@@ -20,9 +21,11 @@ export async function getSession(code: string): Promise<SessionState | null> {
   console.log('Firebase getSession called', { code });
   try {
     const sessionRef = ref(realtimeDB, `${SESSIONS_PATH}/${code}`);
+    console.log('Getting session from ref:', sessionRef.toString());
     const snapshot = await get(sessionRef);
+    console.log('Snapshot exists:', snapshot.exists());
     const result = snapshot.exists() ? snapshot.val() as SessionState : null;
-    console.log('Firebase getSession result:', result ? 'found' : 'not found');
+    console.log('Firebase getSession result:', result ? 'found' : 'not found', result);
     return result;
   } catch (error) {
     console.error('Firebase getSession error:', error);

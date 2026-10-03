@@ -61,13 +61,19 @@ export async function saveSessionState(code: string, state: SessionState): Promi
 
 /** Returns null when storage can't be read, so callers don't block sign-in on it. */
 export async function sessionExists(code: string): Promise<boolean | null> {
+  console.log('sessionExists called for code:', code, 'USE_FIREBASE:', USE_FIREBASE);
   if (USE_FIREBASE) {
     try {
+      console.log('Attempting Firebase sessionExists...');
       const exists = await firebaseSessionExists(code);
+      console.log('Firebase sessionExists returned:', exists);
       if (exists === null) {
+        console.log('Firebase returned null, checking localStorage as fallback');
         // Firebase returned null, check localStorage as fallback
         try {
-          return window.localStorage.getItem(STATE_PREFIX + code) !== null;
+          const localExists = window.localStorage.getItem(STATE_PREFIX + code) !== null;
+          console.log('localStorage sessionExists returned:', localExists);
+          return localExists;
         } catch {
           return null;
         }
@@ -77,14 +83,18 @@ export async function sessionExists(code: string): Promise<boolean | null> {
       console.error('Firebase sessionExists error, falling back to localStorage:', error);
       // Fallback to localStorage if Firebase fails
       try {
-        return window.localStorage.getItem(STATE_PREFIX + code) !== null;
+        const localExists = window.localStorage.getItem(STATE_PREFIX + code) !== null;
+        console.log('localStorage fallback sessionExists returned:', localExists);
+        return localExists;
       } catch {
         return null;
       }
     }
   }
   try {
-    return window.localStorage.getItem(STATE_PREFIX + code) !== null;
+    const localExists = window.localStorage.getItem(STATE_PREFIX + code) !== null;
+    console.log('localStorage sessionExists returned:', localExists);
+    return localExists;
   } catch {
     return null;
   }
