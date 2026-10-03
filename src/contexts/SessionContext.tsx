@@ -47,7 +47,25 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
     console.log('SessionProvider: Initializing session for code:', code);
     let hasReceivedInitial = false;
 
-    // Use Firebase real-time subscription for initial load as well
+    // First, try to load the session explicitly
+    const loadInitialSession = async () => {
+      try {
+        const existing = await loadSessionState(code);
+        console.log('SessionProvider: Initial load result:', existing);
+        if (existing) {
+          stateRef.current = existing;
+          setState(existing);
+          hasReceivedInitial = true;
+          setInitialized(true);
+          console.log('SessionProvider: Initialization complete from initial load, state:', existing);
+        }
+      } catch (error) {
+        console.error('SessionProvider: Initial load error:', error);
+      }
+    };
+    loadInitialSession();
+
+    // Then set up Firebase real-time subscription for updates
     const firebaseUnsubscribe = firebaseSubscribeToSession(code, (firebaseState) => {
       console.log('SessionProvider: Firebase state update received:', firebaseState);
       if (firebaseState) {
@@ -56,20 +74,18 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
         if (!hasReceivedInitial) {
           hasReceivedInitial = true;
           setInitialized(true);
-          console.log('SessionProvider: Initialization complete from Firebase, state:', firebaseState);
+          console.log('SessionProvider: Initialization complete from Firebase subscription, state:', firebaseState);
         }
-      } else {
-        // If Firebase returns null (session doesn't exist), create a new session
-        console.log('SessionProvider: Firebase returned null, creating new session');
+      } else if (!hasReceivedInitial) {
+        // If Firebase returns null and we haven't loaded anything yet, create a new session
+        console.log('SessionProvider: Firebase returned null and no initial load, creating new session');
         const fresh = createInitialState();
         stateRef.current = fresh;
         setState(fresh);
         saveSessionState(code, fresh);
-        if (!hasReceivedInitial) {
-          hasReceivedInitial = true;
-          setInitialized(true);
-          console.log('SessionProvider: Initialization complete (new session), state:', fresh);
-        }
+        hasReceivedInitial = true;
+        setInitialized(true);
+        console.log('SessionProvider: Initialization complete (new session), state:', fresh);
       }
     });
 
