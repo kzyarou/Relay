@@ -111,7 +111,7 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
   const appendMessage = useCallback<SessionContextValue['appendMessage']>(
     (skin, conversationId, message, options) =>
     mutate((s) => {
-      const list = s[skin];
+      const list = s[skin] || [];
       const target = list.find((c) => c.id === conversationId);
       if (!target) return s;
       // Only auto-title untitled chats, so names the controller set are kept.
@@ -127,14 +127,14 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
       return {
         ...s,
         [skin]: [updated, ...list.filter((c) => c.id !== conversationId)],
-        typing: message.sender === 'them' ? s.typing.filter((k) => k !== key) : s.typing
+        typing: (s.typing || []).filter((k) => k !== key)
       };
     }),
     [mutate]
   );
 
   const startConversation = useCallback<SessionContextValue['startConversation']>(
-    (skin, conversation) => mutate((s) => ({ ...s, [skin]: [conversation, ...s[skin]] })),
+    (skin, conversation) => mutate((s) => ({ ...s, [skin]: [conversation, ...(s[skin] || [])] })),
     [mutate]
   );
 
@@ -142,8 +142,8 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
     (skin, conversationId, name) =>
     mutate((s) => {
       const clean = name.trim();
-      if (!clean || !s[skin].some((c) => c.id === conversationId && c.name !== clean)) return s;
-      return { ...s, [skin]: s[skin].map((c) => c.id === conversationId ? { ...c, name: clean } : c) };
+      if (!clean || !(s[skin] || []).some((c) => c.id === conversationId && c.name !== clean)) return s;
+      return { ...s, [skin]: (s[skin] || []).map((c) => c.id === conversationId ? { ...c, name: clean } : c) };
     }),
     [mutate]
   );
@@ -151,12 +151,12 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
   const removeConversation = useCallback<SessionContextValue['removeConversation']>(
     (skin, conversationId) =>
     mutate((s) => {
-      if (!s[skin].some((c) => c.id === conversationId)) return s;
+      if (!(s[skin] || []).some((c) => c.id === conversationId)) return s;
       const key = typingKey(skin, conversationId);
       return {
         ...s,
-        [skin]: s[skin].filter((c) => c.id !== conversationId),
-        typing: s.typing.filter((k) => k !== key)
+        [skin]: (s[skin] || []).filter((c) => c.id !== conversationId),
+        typing: (s.typing || []).filter((k) => k !== key)
       };
     }),
     [mutate]
@@ -165,8 +165,8 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
   const markRead = useCallback<SessionContextValue['markRead']>(
     (skin, conversationId) =>
     mutate((s) => {
-      if (!s[skin].some((c) => c.id === conversationId && c.unread)) return s;
-      return { ...s, [skin]: s[skin].map((c) => c.id === conversationId ? { ...c, unread: false } : c) };
+      if (!(s[skin] || []).some((c) => c.id === conversationId && c.unread)) return s;
+      return { ...s, [skin]: (s[skin] || []).map((c) => c.id === conversationId ? { ...c, unread: false } : c) };
     }),
     [mutate]
   );
@@ -174,10 +174,10 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
   const settleMessage = useCallback<SessionContextValue['settleMessage']>(
     (skin, messageId) =>
     mutate((s) => {
-      if (!s[skin].some((c) => c.messages.some((m) => m.id === messageId && m.animate))) return s;
+      if (!(s[skin] || []).some((c) => c.messages.some((m) => m.id === messageId && m.animate))) return s;
       return {
         ...s,
-        [skin]: s[skin].map((c) =>
+        [skin]: (s[skin] || []).map((c) =>
         c.messages.some((m) => m.id === messageId) ?
         { ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, animate: false } : m) } :
         c
@@ -191,9 +191,9 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
     (skin, conversationId, typing) =>
     mutate((s) => {
       const key = typingKey(skin, conversationId);
-      const has = s.typing.includes(key);
+      const has = (s.typing || []).includes(key);
       if (has === typing) return s;
-      return { ...s, typing: typing ? [...s.typing, key] : s.typing.filter((k) => k !== key) };
+      return { ...s, typing: typing ? [...(s.typing || []), key] : (s.typing || []).filter((k) => k !== key) };
     }),
     [mutate]
   );
@@ -201,8 +201,8 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
   const setAvatar = useCallback<SessionContextValue['setAvatar']>(
     (skin, conversationId, avatar) =>
     mutate((s) => {
-      if (!s[skin].some((c) => c.id === conversationId && c.avatar !== avatar)) return s;
-      return { ...s, [skin]: s[skin].map((c) => c.id === conversationId ? { ...c, avatar } : c) };
+      if (!(s[skin] || []).some((c) => c.id === conversationId && c.avatar !== avatar)) return s;
+      return { ...s, [skin]: (s[skin] || []).map((c) => c.id === conversationId ? { ...c, avatar } : c) };
     }),
     [mutate]
   );
@@ -210,7 +210,7 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
   const setReaction = useCallback<SessionContextValue['setReaction']>(
     (skin, conversationId, messageId, by, emoji) =>
     mutate((s) => {
-      const target = s[skin].find((c) => c.id === conversationId);
+      const target = (s[skin] || []).find((c) => c.id === conversationId);
       if (!target || !target.messages.some((m) => m.id === messageId)) return s;
       const messages = target.messages.map((m) => {
         if (m.id !== messageId) return m;
@@ -219,7 +219,7 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
         reactions[by] = emoji;
         return { ...m, reactions };
       });
-      return { ...s, [skin]: s[skin].map((c) => c.id === conversationId ? { ...c, messages } : c) };
+      return { ...s, [skin]: (s[skin] || []).map((c) => c.id === conversationId ? { ...c, messages } : c) };
     }),
     [mutate]
   );
