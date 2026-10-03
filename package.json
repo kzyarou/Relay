@@ -23,16 +23,14 @@
       "dist-electron/**/*",
       "app_icon"
     ],
-    "mac": {
-      "icon": "app_icon",
-      "category": "public.app-category.social-networking"
-    },
     "win": {
-      "icon": "app_icon"
+      "icon": "app_icon.ico",
+      "target": ["nsis"]
     },
     "linux": {
       "icon": "app_icon",
-      "category": "Network"
+      "category": "Network",
+      "target": ["AppImage", "deb"]
     }
   },
   "dependencies": {

@@ -13,6 +13,7 @@ function createWindow() {
       contextIsolation: true,
     },
     icon: path.join(__dirname, '../app_icon'),
+    title: 'Relay',
   });
 
   // Load the app
