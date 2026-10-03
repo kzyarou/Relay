@@ -46,15 +46,21 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
     setIsSubmitting(true);
 
     try {
+      console.log('Starting sign-in process...', { role, code: normalized, name: trimmed });
+
       // Create session in Firebase if controller
       if (role === 'controller') {
+        console.log('Creating session in Firebase...');
         await createSession(normalized, createInitialState());
+        console.log('Session created successfully');
       }
 
+      console.log('Calling onSignIn...');
       onSignIn({ role, name: trimmed, code: normalized });
+      console.log('Sign-in complete');
     } catch (error) {
       console.error('Sign in error:', error);
-      setErrors({ code: 'Failed to connect. Please try again.' });
+      setErrors({ code: `Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}` });
     } finally {
       setIsSubmitting(false);
     }
