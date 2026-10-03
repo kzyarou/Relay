@@ -20,6 +20,7 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
   const [controllerCode, setControllerCode] = useState(generateSessionCode);
   const [receiverCode, setReceiverCode] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const code = role === 'controller' ? controllerCode : receiverCode;
   const setCode = role === 'controller' ? setControllerCode : setReceiverCode;
@@ -42,12 +43,21 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
     setErrors(next);
     if (next.name || next.code) return;
 
-    // Create session in Firebase if controller
-    if (role === 'controller') {
-      await createSession(normalized, createInitialState());
-    }
+    setIsSubmitting(true);
 
-    onSignIn({ role, name: trimmed, code: normalized });
+    try {
+      // Create session in Firebase if controller
+      if (role === 'controller') {
+        await createSession(normalized, createInitialState());
+      }
+
+      onSignIn({ role, name: trimmed, code: normalized });
+    } catch (error) {
+      console.error('Sign in error:', error);
+      setErrors({ code: 'Failed to connect. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -160,10 +170,11 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
 
           <button
             type="submit"
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gpt-text text-[15px] font-medium text-white transition-[background-color,transform] duration-150 hover:bg-black active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30 focus-visible:ring-offset-2">
-            
-            Continue as {roleTitle}
-            <ArrowRightIcon className="h-4 w-4" />
+            disabled={isSubmitting}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gpt-text text-[15px] font-medium text-white transition-[background-color,transform] duration-150 hover:bg-black active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
+
+            {isSubmitting ? 'Signing in...' : `Continue as ${roleTitle}`}
+            {!isSubmitting && <ArrowRightIcon className="h-4 w-4" />}
           </button>
         </form>
 
