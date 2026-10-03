@@ -1,16 +1,23 @@
 import type { Skin } from '../types/chat';
 import type { SessionState, SessionUser } from '../types/session';
+import { sessionExists as firebaseSessionExists, createSession as firebaseCreateSession, getSession as firebaseGetSession, updateSession as firebaseUpdateSession, subscribeToSession as firebaseSubscribeToSession } from './firebaseSession';
 
 // v2: sessions start empty — older saved sessions contained sample chats.
 const STATE_PREFIX = 'chat-session-v2:';
 const USER_KEY = 'chat-session-user';
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+// Use Firebase for session management
+const USE_FIREBASE = true;
+
 export function createInitialState(): SessionState {
   return { messenger: [], chatgpt: [], typing: [] };
 }
 
-export function loadSessionState(code: string): SessionState | null {
+export async function loadSessionState(code: string): Promise<SessionState | null> {
+  if (USE_FIREBASE) {
+    return await firebaseGetSession(code);
+  }
   try {
     const raw = window.localStorage.getItem(STATE_PREFIX + code);
     return raw ? JSON.parse(raw) as SessionState : null;
@@ -19,16 +26,24 @@ export function loadSessionState(code: string): SessionState | null {
   }
 }
 
-export function saveSessionState(code: string, state: SessionState): void {
+export async function saveSessionState(code: string, state: SessionState): Promise<void> {
+  if (USE_FIREBASE) {
+    await firebaseUpdateSession(code, state);
+    return;
+  }
   try {
     window.localStorage.setItem(STATE_PREFIX + code, JSON.stringify(state));
   } catch {
 
     // Storage unavailable — the in-memory copy and broadcast channel still work.
-  }}
+  }
+}
 
 /** Returns null when storage can't be read, so callers don't block sign-in on it. */
-export function sessionExists(code: string): boolean | null {
+export async function sessionExists(code: string): Promise<boolean | null> {
+  if (USE_FIREBASE) {
+    return await firebaseSessionExists(code);
+  }
   try {
     return window.localStorage.getItem(STATE_PREFIX + code) !== null;
   } catch {

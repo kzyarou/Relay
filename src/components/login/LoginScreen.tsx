@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { ArrowRightIcon, RefreshCwIcon } from 'lucide-react';
 import { loginRoles } from '../../data/loginRoles';
 import type { Role, SessionUser } from '../../types/session';
-import { generateSessionCode, normalizeCode, sessionExists } from '../../utils/session';
+import { generateSessionCode, normalizeCode, sessionExists, createInitialState } from '../../utils/session';
+import { createSession } from '../../utils/firebaseSession';
 
 interface LoginScreenProps {
   onSignIn: (user: SessionUser) => void;
@@ -29,17 +30,23 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
     setErrors({});
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
     const normalized = normalizeCode(code);
     const next: FormErrors = {};
     if (!trimmed) next.name = 'Enter a display name.';
     if (normalized.length < 4) next.code = 'Session codes are at least 4 characters.';else
-    if (role === 'receiver' && sessionExists(normalized) === false)
+    if (role === 'receiver' && await sessionExists(normalized) === false)
     next.code = 'No session with that code yet. Ask the controller to sign in first.';
     setErrors(next);
     if (next.name || next.code) return;
+
+    // Create session in Firebase if controller
+    if (role === 'controller') {
+      await createSession(normalized, createInitialState());
+    }
+
     onSignIn({ role, name: trimmed, code: normalized });
   };
 
@@ -93,7 +100,7 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
               id="display-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={role === 'controller' ? 'e.g. Sam' : 'e.g. Alex Kim'}
+              placeholder={role === 'controller' ? 'e.g. Stephen Harry' : 'e.g. Cedrick James'}
               autoComplete="nickname"
               aria-invalid={!!errors.name}
               aria-describedby={errors.name ? 'display-name-error' : undefined}

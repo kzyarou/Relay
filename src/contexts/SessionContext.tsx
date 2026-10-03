@@ -10,6 +10,7 @@ import {
   toTitle,
   typingKey } from
 '../utils/session';
+import { subscribeToSession as firebaseSubscribeToSession } from '../utils/firebaseSession';
 
 interface SessionContextValue {
   code: string;
@@ -50,25 +51,33 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
     const onMessage = (e: MessageEvent<SessionState>) => receive(e.data);
     const onStorage = (e: StorageEvent) => {
       if (!isSessionKey(e.key, code)) return;
-      const next = loadSessionState(code);
-      if (next) receive(next);
+      loadSessionState(code).then((next) => {
+        if (next) receive(next);
+      });
     };
     channel?.addEventListener('message', onMessage);
     window.addEventListener('storage', onStorage);
+
+    // Firebase real-time subscription
+    const firebaseUnsubscribe = firebaseSubscribeToSession(code, (next) => {
+      if (next) receive(next);
+    });
+
     return () => {
       channel?.removeEventListener('message', onMessage);
       channel?.close();
       channelRef.current = null;
       window.removeEventListener('storage', onStorage);
+      firebaseUnsubscribe();
     };
   }, [code]);
 
   const mutate = useCallback(
-    (fn: (current: SessionState) => SessionState) => {
-      const current = loadSessionState(code) ?? stateRef.current;
+    async (fn: (current: SessionState) => SessionState) => {
+      const current = (await loadSessionState(code)) ?? stateRef.current;
       const next = fn(current);
       if (next === current) return;
-      saveSessionState(code, next);
+      await saveSessionState(code, next);
       stateRef.current = next;
       setState(next);
       channelRef.current?.postMessage(next);
