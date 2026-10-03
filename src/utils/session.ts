@@ -38,12 +38,16 @@ export async function loadSessionState(code: string): Promise<SessionState | nul
 }
 
 export async function saveSessionState(code: string, state: SessionState): Promise<void> {
+  console.log('saveSessionState called for code:', code, 'USE_FIREBASE:', USE_FIREBASE);
   if (USE_FIREBASE) {
     try {
+      console.log('Attempting Firebase saveSessionState...');
       await firebaseUpdateSession(code, state);
+      console.log('Firebase saveSessionState success');
       // Also save to localStorage as backup
       try {
         window.localStorage.setItem(STATE_PREFIX + code, JSON.stringify(state));
+        console.log('Also saved to localStorage as backup');
       } catch {}
       return;
     } catch (error) {
@@ -52,7 +56,9 @@ export async function saveSessionState(code: string, state: SessionState): Promi
     }
   }
   try {
+    console.log('Saving to localStorage...');
     window.localStorage.setItem(STATE_PREFIX + code, JSON.stringify(state));
+    console.log('localStorage saveSessionState success');
   } catch {
 
     // Storage unavailable — the in-memory copy and broadcast channel still work.

@@ -50,7 +50,7 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
 
       // Create session in Firebase if controller
       if (role === 'controller') {
-        console.log('Creating session in Firebase...');
+        console.log('Creating session in Firebase for code:', normalized);
         try {
           await createSession(normalized, createInitialState());
           console.log('Session created successfully in Firebase');
