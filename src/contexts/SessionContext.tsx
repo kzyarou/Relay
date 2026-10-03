@@ -44,25 +44,40 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
 
   // Initialize session on mount
   useEffect(() => {
-    const initializeSession = async () => {
-      console.log('SessionProvider: Initializing session for code:', code);
-      const existing = await loadSessionState(code);
-      console.log('SessionProvider: Existing session:', existing);
-      if (existing) {
-        stateRef.current = existing;
-        setState(existing);
+    console.log('SessionProvider: Initializing session for code:', code);
+    let hasReceivedInitial = false;
+
+    // Use Firebase real-time subscription for initial load as well
+    const firebaseUnsubscribe = firebaseSubscribeToSession(code, (firebaseState) => {
+      console.log('SessionProvider: Firebase state update received:', firebaseState);
+      if (firebaseState) {
+        stateRef.current = firebaseState;
+        setState(firebaseState);
+        if (!hasReceivedInitial) {
+          hasReceivedInitial = true;
+          setInitialized(true);
+          console.log('SessionProvider: Initialization complete from Firebase, state:', firebaseState);
+        }
       } else {
-        console.log('SessionProvider: Creating new session');
+        // If Firebase returns null (session doesn't exist), create a new session
+        console.log('SessionProvider: Firebase returned null, creating new session');
         const fresh = createInitialState();
         stateRef.current = fresh;
         setState(fresh);
-        await saveSessionState(code, fresh);
+        saveSessionState(code, fresh);
+        if (!hasReceivedInitial) {
+          hasReceivedInitial = true;
+          setInitialized(true);
+          console.log('SessionProvider: Initialization complete (new session), state:', fresh);
+        }
       }
-      setInitialized(true);
-      console.log('SessionProvider: Initialization complete, state:', stateRef.current);
+    });
+
+    return () => {
+      console.log('SessionProvider: Cleaning up Firebase subscription');
+      firebaseUnsubscribe();
     };
-    initializeSession();
-  }, [code, state]);
+  }, [code]);
 
   useEffect(() => {
     const receive = (next: SessionState) => {
@@ -81,17 +96,11 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
     channel?.addEventListener('message', onMessage);
     window.addEventListener('storage', onStorage);
 
-    // Firebase real-time subscription
-    const firebaseUnsubscribe = firebaseSubscribeToSession(code, (next) => {
-      if (next) receive(next);
-    });
-
     return () => {
       channel?.removeEventListener('message', onMessage);
       channel?.close();
       channelRef.current = null;
       window.removeEventListener('storage', onStorage);
-      firebaseUnsubscribe();
     };
   }, [code]);
 
