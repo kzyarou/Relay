@@ -8,7 +8,7 @@ const USER_KEY = 'chat-session-user';
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 // Use Firebase for session management
-const USE_FIREBASE = false; // Temporarily disabled due to connection issues
+const USE_FIREBASE = true;
 
 export function createInitialState(): SessionState {
   return { messenger: [], chatgpt: [], typing: [] };
