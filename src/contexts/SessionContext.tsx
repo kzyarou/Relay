@@ -45,6 +45,7 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
   useEffect(() => {
     console.log('SessionProvider: Initializing session for code:', code);
     let hasReceivedInitial = false;
+    let timeoutId: NodeJS.Timeout | null = null;
 
     // First, try to load the session explicitly
     const loadInitialSession = async () => {
@@ -68,6 +69,11 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
     const firebaseUnsubscribe = firebaseSubscribeToSession(code, (firebaseState) => {
       console.log('SessionProvider: Firebase state update received:', firebaseState);
       if (firebaseState) {
+        // Clear timeout if we received data
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
         stateRef.current = firebaseState;
         setState(firebaseState);
         if (!hasReceivedInitial) {
@@ -76,20 +82,27 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
           console.log('SessionProvider: Initialization complete from Firebase subscription, state:', firebaseState);
         }
       } else if (!hasReceivedInitial) {
-        // If Firebase returns null and we haven't loaded anything yet, create a new session
-        console.log('SessionProvider: Firebase returned null and no initial load, creating new session');
-        const fresh = createInitialState();
-        stateRef.current = fresh;
-        setState(fresh);
-        saveSessionState(code, fresh);
-        hasReceivedInitial = true;
-        setInitialized(true);
-        console.log('SessionProvider: Initialization complete (new session), state:', fresh);
+        // If Firebase returns null and we haven't loaded anything yet, wait a bit before creating new session
+        if (!timeoutId) {
+          timeoutId = setTimeout(() => {
+            console.log('SessionProvider: Firebase returned null after timeout, creating new session');
+            const fresh = createInitialState();
+            stateRef.current = fresh;
+            setState(fresh);
+            saveSessionState(code, fresh);
+            hasReceivedInitial = true;
+            setInitialized(true);
+            console.log('SessionProvider: Initialization complete (new session), state:', fresh);
+          }, 1000); // Wait 1 second for Firebase to respond
+        }
       }
     });
 
     return () => {
       console.log('SessionProvider: Cleaning up Firebase subscription');
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       firebaseUnsubscribe();
     };
   }, [code]);

@@ -50,7 +50,13 @@ export function subscribeToSession(code: string, callback: (state: SessionState 
   console.log('Firebase subscribeToSession called', { code });
   const sessionRef = ref(realtimeDB, `${SESSIONS_PATH}/${code}`);
   const unsubscribe = onValue(sessionRef, (snapshot) => {
-    callback(snapshot.exists() ? snapshot.val() as SessionState : null);
+    console.log('Firebase onValue callback triggered, snapshot exists:', snapshot.exists());
+    const value = snapshot.exists() ? snapshot.val() as SessionState : null;
+    console.log('Firebase onValue callback value:', value);
+    callback(value);
+  }, (error) => {
+    console.error('Firebase onValue error:', error);
+    callback(null);
   });
   return unsubscribe;
 }
