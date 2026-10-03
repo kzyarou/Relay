@@ -3,7 +3,6 @@ import type { Conversation, Message, Sender, Skin } from '../types/chat';
 import type { SessionState } from '../types/session';
 import {
   createInitialState,
-  isSessionKey,
   loadSessionState,
   saveSessionState,
   sessionChannelName,
@@ -103,20 +102,19 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
     const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(sessionChannelName(code)) : null;
     channelRef.current = channel;
     const onMessage = (e: MessageEvent<SessionState>) => receive(e.data);
-    const onStorage = (e: StorageEvent) => {
-      if (!isSessionKey(e.key, code)) return;
-      loadSessionState(code).then((next) => {
-        if (next) receive(next);
-      });
-    };
+
     channel?.addEventListener('message', onMessage);
-    window.addEventListener('storage', onStorage);
+
+    // Firebase real-time subscription
+    const firebaseUnsubscribe = firebaseSubscribeToSession(code, (next) => {
+      if (next) receive(next);
+    });
 
     return () => {
       channel?.removeEventListener('message', onMessage);
       channel?.close();
       channelRef.current = null;
-      window.removeEventListener('storage', onStorage);
+      firebaseUnsubscribe();
     };
   }, [code]);
 

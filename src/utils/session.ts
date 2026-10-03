@@ -16,94 +16,29 @@ export function createInitialState(): SessionState {
 
 export async function loadSessionState(code: string): Promise<SessionState | null> {
   if (USE_FIREBASE) {
-    try {
-      return await firebaseGetSession(code);
-    } catch (error) {
-      console.error('Firebase loadSessionState error, falling back to localStorage:', error);
-      // Fallback to localStorage if Firebase fails
-      try {
-        const raw = window.localStorage.getItem(STATE_PREFIX + code);
-        return raw ? JSON.parse(raw) as SessionState : null;
-      } catch {
-        return null;
-      }
-    }
+    return await firebaseGetSession(code);
   }
-  try {
-    const raw = window.localStorage.getItem(STATE_PREFIX + code);
-    return raw ? JSON.parse(raw) as SessionState : null;
-  } catch {
-    return null;
-  }
+  throw new Error('Firebase is required for cross-device sync');
 }
 
 export async function saveSessionState(code: string, state: SessionState): Promise<void> {
-  console.log('saveSessionState called for code:', code, 'USE_FIREBASE:', USE_FIREBASE);
   if (USE_FIREBASE) {
-    try {
-      console.log('Attempting Firebase saveSessionState...');
-      await firebaseUpdateSession(code, state);
-      console.log('Firebase saveSessionState success');
-      // Also save to localStorage as backup
-      try {
-        window.localStorage.setItem(STATE_PREFIX + code, JSON.stringify(state));
-        console.log('Also saved to localStorage as backup');
-      } catch {}
-      return;
-    } catch (error) {
-      console.error('Firebase saveSessionState error, falling back to localStorage:', error);
-      // Fallback to localStorage if Firebase fails
-    }
+    await firebaseUpdateSession(code, state);
+    return;
   }
-  try {
-    console.log('Saving to localStorage...');
-    window.localStorage.setItem(STATE_PREFIX + code, JSON.stringify(state));
-    console.log('localStorage saveSessionState success');
-  } catch {
-
-    // Storage unavailable — the in-memory copy and broadcast channel still work.
-  }
+  throw new Error('Firebase is required for cross-device sync');
 }
 
 /** Returns null when storage can't be read, so callers don't block sign-in on it. */
 export async function sessionExists(code: string): Promise<boolean | null> {
   console.log('sessionExists called for code:', code, 'USE_FIREBASE:', USE_FIREBASE);
   if (USE_FIREBASE) {
-    try {
-      console.log('Attempting Firebase sessionExists...');
-      const exists = await firebaseSessionExists(code);
-      console.log('Firebase sessionExists returned:', exists);
-      if (exists === null) {
-        console.log('Firebase returned null, checking localStorage as fallback');
-        // Firebase returned null, check localStorage as fallback
-        try {
-          const localExists = window.localStorage.getItem(STATE_PREFIX + code) !== null;
-          console.log('localStorage sessionExists returned:', localExists);
-          return localExists;
-        } catch {
-          return null;
-        }
-      }
-      return exists;
-    } catch (error) {
-      console.error('Firebase sessionExists error, falling back to localStorage:', error);
-      // Fallback to localStorage if Firebase fails
-      try {
-        const localExists = window.localStorage.getItem(STATE_PREFIX + code) !== null;
-        console.log('localStorage fallback sessionExists returned:', localExists);
-        return localExists;
-      } catch {
-        return null;
-      }
-    }
+    console.log('Attempting Firebase sessionExists...');
+    const exists = await firebaseSessionExists(code);
+    console.log('Firebase sessionExists returned:', exists);
+    return exists;
   }
-  try {
-    const localExists = window.localStorage.getItem(STATE_PREFIX + code) !== null;
-    console.log('localStorage sessionExists returned:', localExists);
-    return localExists;
-  } catch {
-    return null;
-  }
+  throw new Error('Firebase is required for cross-device sync');
 }
 
 export function isSessionKey(key: string | null, code: string): boolean {

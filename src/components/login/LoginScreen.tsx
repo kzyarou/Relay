@@ -51,13 +51,8 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
       // Create session in Firebase if controller
       if (role === 'controller') {
         console.log('Creating session in Firebase for code:', normalized);
-        try {
-          await createSession(normalized, createInitialState());
-          console.log('Session created successfully in Firebase');
-        } catch (error) {
-          console.error('Firebase session creation failed, session will be created locally:', error);
-          // Continue anyway - session will be created in localStorage by SessionContext
-        }
+        await createSession(normalized, createInitialState());
+        console.log('Session created successfully in Firebase');
       }
 
       console.log('Calling onSignIn...');
@@ -65,7 +60,7 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
       console.log('Sign-in complete');
     } catch (error) {
       console.error('Sign in error:', error);
-      setErrors({ code: `Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}` });
+      setErrors({ code: `Failed to connect to Firebase: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your internet connection and Firebase configuration.` });
     } finally {
       setIsSubmitting(false);
     }
