@@ -37,9 +37,32 @@ interface SessionProviderProps {
 }
 
 export function SessionProvider({ code, children }: SessionProviderProps) {
-  const [state, setState] = useState<SessionState>(() => ensureState(code));
+  const [state, setState] = useState<SessionState>(createInitialState());
+  const [initialized, setInitialized] = useState(false);
   const stateRef = useRef(state);
   const channelRef = useRef<BroadcastChannel | null>(null);
+
+  // Initialize session on mount
+  useEffect(() => {
+    const initializeSession = async () => {
+      console.log('SessionProvider: Initializing session for code:', code);
+      const existing = await loadSessionState(code);
+      console.log('SessionProvider: Existing session:', existing);
+      if (existing) {
+        stateRef.current = existing;
+        setState(existing);
+      } else {
+        console.log('SessionProvider: Creating new session');
+        const fresh = createInitialState();
+        stateRef.current = fresh;
+        setState(fresh);
+        await saveSessionState(code, fresh);
+      }
+      setInitialized(true);
+      console.log('SessionProvider: Initialization complete, state:', stateRef.current);
+    };
+    initializeSession();
+  }, [code, state]);
 
   useEffect(() => {
     const receive = (next: SessionState) => {
@@ -244,6 +267,11 @@ export function SessionProvider({ code, children }: SessionProviderProps) {
 
   );
 
+  // Don't render children until session is initialized
+  if (!initialized) {
+    return <div className="flex min-h-screen items-center justify-center text-gpt-muted">Loading...</div>;
+  }
+
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
@@ -251,12 +279,4 @@ export function useSession(): SessionContextValue {
   const ctx = useContext(SessionContext);
   if (!ctx) throw new Error('useSession must be used inside a SessionProvider');
   return ctx;
-}
-
-function ensureState(code: string): SessionState {
-  const existing = loadSessionState(code);
-  if (existing) return existing;
-  const fresh = createInitialState();
-  saveSessionState(code, fresh);
-  return fresh;
 }
