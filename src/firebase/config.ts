@@ -11,7 +11,7 @@ const firebaseConfig = {
   messagingSenderId: "630810851296",
   appId: "1:630810851296:web:be82558458e9492c04dd85",
   measurementId: "G-LMSL4TBL2K",
-  databaseURL: "https://enya-9b04a-default-rtdb.firebaseio.com"
+  databaseURL: "https://enya-9b04a.firebaseio.com"
 };
 
 const app = initializeApp(firebaseConfig);
