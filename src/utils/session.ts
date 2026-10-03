@@ -8,7 +8,7 @@ const USER_KEY = 'chat-session-user';
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 // Use Firebase for session management
-const USE_FIREBASE = false; // Disabled until Realtime Database is properly configured in Firebase console
+const USE_FIREBASE = true; // Disabled until Realtime Database is properly configured in Firebase console
 
 export function createInitialState(): SessionState {
   return { messenger: [], chatgpt: [], typing: [] };
@@ -16,7 +16,18 @@ export function createInitialState(): SessionState {
 
 export async function loadSessionState(code: string): Promise<SessionState | null> {
   if (USE_FIREBASE) {
-    return await firebaseGetSession(code);
+    try {
+      return await firebaseGetSession(code);
+    } catch (error) {
+      console.error('Firebase loadSessionState error, falling back to localStorage:', error);
+      // Fallback to localStorage if Firebase fails
+      try {
+        const raw = window.localStorage.getItem(STATE_PREFIX + code);
+        return raw ? JSON.parse(raw) as SessionState : null;
+      } catch {
+        return null;
+      }
+    }
   }
   try {
     const raw = window.localStorage.getItem(STATE_PREFIX + code);
@@ -28,8 +39,17 @@ export async function loadSessionState(code: string): Promise<SessionState | nul
 
 export async function saveSessionState(code: string, state: SessionState): Promise<void> {
   if (USE_FIREBASE) {
-    await firebaseUpdateSession(code, state);
-    return;
+    try {
+      await firebaseUpdateSession(code, state);
+      // Also save to localStorage as backup
+      try {
+        window.localStorage.setItem(STATE_PREFIX + code, JSON.stringify(state));
+      } catch {}
+      return;
+    } catch (error) {
+      console.error('Firebase saveSessionState error, falling back to localStorage:', error);
+      // Fallback to localStorage if Firebase fails
+    }
   }
   try {
     window.localStorage.setItem(STATE_PREFIX + code, JSON.stringify(state));
@@ -42,7 +62,26 @@ export async function saveSessionState(code: string, state: SessionState): Promi
 /** Returns null when storage can't be read, so callers don't block sign-in on it. */
 export async function sessionExists(code: string): Promise<boolean | null> {
   if (USE_FIREBASE) {
-    return await firebaseSessionExists(code);
+    try {
+      const exists = await firebaseSessionExists(code);
+      if (exists === null) {
+        // Firebase returned null, check localStorage as fallback
+        try {
+          return window.localStorage.getItem(STATE_PREFIX + code) !== null;
+        } catch {
+          return null;
+        }
+      }
+      return exists;
+    } catch (error) {
+      console.error('Firebase sessionExists error, falling back to localStorage:', error);
+      // Fallback to localStorage if Firebase fails
+      try {
+        return window.localStorage.getItem(STATE_PREFIX + code) !== null;
+      } catch {
+        return null;
+      }
+    }
   }
   try {
     return window.localStorage.getItem(STATE_PREFIX + code) !== null;

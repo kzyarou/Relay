@@ -51,8 +51,13 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
       // Create session in Firebase if controller
       if (role === 'controller') {
         console.log('Creating session in Firebase...');
-        await createSession(normalized, createInitialState());
-        console.log('Session created successfully');
+        try {
+          await createSession(normalized, createInitialState());
+          console.log('Session created successfully in Firebase');
+        } catch (error) {
+          console.error('Firebase session creation failed, session will be created locally:', error);
+          // Continue anyway - session will be created in localStorage by SessionContext
+        }
       }
 
       console.log('Calling onSignIn...');
