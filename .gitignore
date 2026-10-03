@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Mobile apps
+android
+ios
+
+# Desktop builds
+release
+dist-electron
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

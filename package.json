@@ -9,7 +9,11 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "preview": "npx vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && tsc -p tsconfig.electron.json && electron-builder"
+    "electron:build": "npm run build && tsc -p tsconfig.electron.json && electron-builder",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android",
+    "cap:ios": "npx cap open ios",
+    "mobile:build": "npm run build && npx cap sync"
   },
   "main": "dist-electron/main.js",
   "build": {
@@ -21,19 +25,29 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
-      "app_icon"
+      "app_icon",
+      "app_icon.ico"
     ],
     "win": {
       "icon": "app_icon.ico",
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     },
     "linux": {
       "icon": "app_icon",
       "category": "Network",
-      "target": ["AppImage", "deb"]
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     }
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "@emotion/react": "^11.13.3",
     "date-fns": "^4.0.0",
     "framer-motion": "^11.5.4",
