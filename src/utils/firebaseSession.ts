@@ -10,7 +10,13 @@ export async function createSession(code: string, initialState: SessionState): P
     const sessionRef = ref(realtimeDB, `${SESSIONS_PATH}/${code}`);
     console.log('Session ref created:', sessionRef.toString());
     await set(sessionRef, initialState);
-    console.log('Firebase createSession success');
+    console.log('Firebase createSession success, verifying...');
+    // Verify the write by reading it back immediately
+    const snapshot = await get(sessionRef);
+    console.log('Verification - snapshot exists after write:', snapshot.exists());
+    if (!snapshot.exists()) {
+      console.error('Write verification failed - session not found immediately after write');
+    }
   } catch (error) {
     console.error('Firebase createSession error:', error);
     throw error;
@@ -22,8 +28,19 @@ export async function getSession(code: string): Promise<SessionState | null> {
   try {
     const sessionRef = ref(realtimeDB, `${SESSIONS_PATH}/${code}`);
     console.log('Getting session from ref:', sessionRef.toString());
+    console.log('Full ref path:', sessionRef.key);
     const snapshot = await get(sessionRef);
     console.log('Snapshot exists:', snapshot.exists());
+    if (!snapshot.exists()) {
+      console.log('Snapshot key:', snapshot.key);
+      console.log('Trying to list all sessions to debug...');
+      const allSessionsRef = ref(realtimeDB, SESSIONS_PATH);
+      const allSnapshot = await get(allSessionsRef);
+      console.log('All sessions exist:', allSnapshot.exists());
+      if (allSnapshot.exists()) {
+        console.log('All sessions data:', Object.keys(allSnapshot.val() || {}));
+      }
+    }
     const result = snapshot.exists() ? snapshot.val() as SessionState : null;
     console.log('Firebase getSession result:', result ? 'found' : 'not found', result);
     return result;
